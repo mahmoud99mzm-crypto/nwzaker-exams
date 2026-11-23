@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>الامتحانات</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:Tahoma;padding:20px;background:#f5f5f5}
+.card{background:#fff;padding:15px;border-radius:12px;margin-bottom:15px}
+input,textarea{width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;font:inherit}
+textarea{min-height:80px;resize:vertical}
+button{padding:10px 18px;border:none;border-radius:8px;background:#000;color:#fff;cursor:pointer;margin:2px}
+button:disabled{opacity:.6;cursor:wait}
+.delete{background:red}
+.edit{background:orange}
+#loginBox{max-width:400px;margin:100px auto;text-align:center}
+#adminBox{display:none}
+.field{margin:12px 0}
+.field label,.question-editor label{display:block}
+.question-editor{border:1px solid #ddd;border-radius:10px;padding:12px;margin:12px 0}
+.question-heading,.answer-options{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.answer-options{justify-content:flex-start;flex-wrap:wrap;margin-top:12px}
+.answer-options label{display:flex;align-items:center;gap:4px}
+.answer-options input{width:auto;margin:0}
+.notice{min-height:1.5em}
+.error{color:#b00020}
+.success{color:#087a37}
+</style>
+</head>
+<body>
+
+<div id="loginBox" class="card">
+<h2>🔒 دخول المشرف</h2>
+<form id="loginForm">
+<input type="password" id="passInput" placeholder="كلمة السر" autocomplete="current-password" required>
+<button type="submit" style="width:100%">دخول</button>
+</form>
+<p id="errMsg" style="color:red" role="alert"></p>
+</div>
+
+<div id="adminBox">
+<h2>🎓 الامتحانات</h2>
+<button onclick="logout()" style="background:#666">تسجيل خروج</button>
+<form id="examForm" class="card">
+<h3>➕ إضافة امتحان</h3>
+<div class="field">
+  <label for="newExamTitle">اسم الامتحان</label>
+  <input id="newExamTitle" placeholder="اسم الامتحان" required>
+</div>
+<div class="field">
+  <label for="examDuration">مدة الامتحان بالدقائق</label>
+  <input id="examDuration" type="number" min="1" value="7" required>
+</div>
+<div id="questionEditors"></div>
+<button id="addQuestionBtn" type="button" class="edit">+ إضافة سؤال</button>
+<button id="saveExamBtn" type="submit">حفظ الامتحان والأسئلة</button>
+<p id="examFormMessage" class="notice" role="status"></p>
+</form>
+<div id="list"></div>
+</div>
+
+<script>
+// ===== عدل هنا بس =====
+const ADMIN_PASSWORD = "Mahmoud@12345";
+const SUPABASE_URL = "https://tvehmaaosdptlvgrbwpm.supabase.co/";
+const SUPABASE_KEY = "sb_publishable_kd-G1PnEB0vDog11oKPN0g_MLCXJOqr";
+// =======================
+
+const supabaseClient = window.supabase
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+const examForm = document.getElementById('examForm');
+const questionEditors = document.getElementById('questionEditors');
+const examFormMessage = document.getElementById('examFormMessage');
+const saveExamBtn = document.getElementById('saveExamBtn');
+let questionNumber = 0;
+
+function addQuestion(){
+  questionNumber += 1;
+  const editor = document.createElement('section');
+  editor.className = 'question-editor';
+  editor.innerHTML = `
+    <div class="question-heading">
+      <h4>السؤال ${questionNumber}</h4>
+      <button type="button" class="delete" data-action="remove-question">حذف السؤال</button>
+    </div>
+    <label>نص السؤال
+      <textarea data-field="question" placeholder="اكتب السؤال هنا" required></textarea>
+    </label>
+    <label>الاختيار أ
+      <input data-field="option_a" placeholder="الاختيار أ" required>
+    </label>
+    <label>الاختيار ب
+      <input data-field="option_b" placeholder="الاختيار ب" required>
+    </label>
+    <label>الاختيار ج
+      <input data-field="option_c" placeholder="الاختيار ج" required>
+    </label>
+    <label>الاختيار د
+      <input data-field="option_d" placeholder="الاختيار د" required>
+    </label>
+    <div class="answer-options">
+      <strong>الإجابة الصحيحة:</strong>
+      <label><input type="radio" name="correct-${questionNumber}" value="a" required> أ</label>
+      <label><input type="radio" name="correct-${questionNumber}" value="b"> ب</label>
+      <label><input type="radio" name="correct-${questionNumber}" value="c"> ج</label>
+      <label><input type="radio" name="correct-${questionNumber}" value="d"> د</label>
+    </div>`;
+  questionEditors.append(editor);
+}
+
+document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
+questionEditors.addEventListener('click', (event) => {
+  const removeButton = event.target.closest('button[data-action="remove-question"]');
+  if (!removeButton) return;
+  if (questionEditors.children.length === 1) {
+    examFormMessage.textContent = 'لازم يكون في الامتحان سؤال واحد على الأقل.';
+    examFormMessage.className = 'notice error';
+    return;
+  }
+  removeButton.closest('.question-editor').remove();
+});
+addQuestion();
+
+examForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  examFormMessage.textContent = '';
+  examFormMessage.className = 'notice';
+  if (!supabaseClient) {
+    examFormMessage.textContent = 'تعذر الاتصال بـSupabase. تحقق من اتصال الإنترنت ثم أعد المحاولة.';
+    examFormMessage.className = 'notice error';
+    return;
+  }
+
+  const questions = Array.from(questionEditors.querySelectorAll('.question-editor')).map((editor) => ({
+    question_text: editor.querySelector('[data-field="question"]').value.trim(),
+    option_a: editor.querySelector('[data-field="option_a"]').value.trim(),
+    option_b: editor.querySelector('[data-field="option_b"]').value.trim(),
+    option_c: editor.querySelector('[data-field="option_c"]').value.trim(),
+    option_d: editor.querySelector('[data-field="option_d"]').value.trim(),
+    correct_option: editor.querySelector('input[type="radio"]:checked')?.value
+  }));
+  if (!questions.length || questions.some((question) => !question.correct_option)) {
+    examFormMessage.textContent = 'أضف سؤالًا واحدًا على الأقل وحدد إجابته الصحيحة.';
+    examFormMessage.className = 'notice error';
+    return;
+  }
+
+  saveExamBtn.disabled = true;
+  examFormMessage.textContent = 'جاري حفظ الامتحان والأسئلة...';
+  let examId;
+  try {
+    const { data: exam, error: examError } = await supabaseClient
+      .from('exams')
+      .insert({
+        title: document.getElementById('newExamTitle').value.trim(),
+        description: '',
+        duration_minutes: Number(document.getElementById('examDuration').value)
+      })
+      .select('id')
+      .single();
+    if (examError) throw examError;
+    if (!exam) throw new Error('لم يتم إنشاء الامتحان.');
+    examId = exam.id;
+
+    const { error: questionsError } = await supabaseClient
+      .from('questions')
+      .insert(questions.map((question) => ({ ...question, exam_id: examId })));
+    if (questionsError) throw questionsError;
+  } catch (error) {
+    console.error('Could not save exam and questions:', error);
+    if (examId) {
+      try {
+        const { error: rollbackError } = await supabaseClient.from('exams').delete().eq('id', examId);
+        if (rollbackError) throw rollbackError;
+        examFormMessage.textContent = `تعذر حفظ الامتحان والأسئلة: ${error.message}`;
+      } catch (rollbackError) {
+        console.error('Could not remove exam after question save failed:', rollbackError);
+        examFormMessage.textContent = `تعذر حفظ الأسئلة: ${error.message}. وتعذر حذف الامتحان تلقائيًا: ${rollbackError.message}`;
+      }
+    } else {
+      examFormMessage.textContent = `تعذر حفظ الامتحان: ${error.message}`;
+    }
+    examFormMessage.className = 'notice error';
+    return;
+  } finally {
+    saveExamBtn.disabled = false;
+  }
+
+  examForm.reset();
+  document.getElementById('examDuration').value = '7';
+  questionEditors.replaceChildren();
+  addQuestion();
+  examFormMessage.textContent = 'تم حفظ الامتحان والأسئلة بنجاح.';
+  examFormMessage.className = 'notice success';
+  try {
+    await loadExams();
+  } catch (error) {
+    console.error('Could not refresh exam list after saving:', error);
+    examFormMessage.textContent = `تم الحفظ، لكن تعذر تحديث قائمة الامتحانات: ${error.message}`;
+    examFormMessage.className = 'notice error';
+  }
+});
+
+function checkPass(event){
+  event.preventDefault();
+  const val = document.getElementById('passInput').value.trim();
+  if(val === ADMIN_PASSWORD){
+    document.getElementById('errMsg').innerText='';
+    document.getElementById('loginBox').style.display='none';
+    document.getElementById('adminBox').style.display='block';
+    sessionStorage.setItem('isAdmin','yes');
+    loadExams();
+  } else {
+    document.getElementById('errMsg').innerText='كلمة السر غلط ❌';
+  }
+}
+document.getElementById('loginForm').addEventListener('submit', checkPass);
+function logout(){ sessionStorage.removeItem('isAdmin'); location.reload(); }
+
+if(sessionStorage.getItem('isAdmin')==='yes'){
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('adminBox').style.display='block';
+  loadExams();
+}
+
+async function loadExams(){
+  if(!supabaseClient){
+    document.getElementById('list').innerText='تعذر تحميل Supabase. تحقق من اتصال الإنترنت ثم أعد تحميل الصفحة.';
+    return;
+  }
+  const {data, error} = await supabaseClient.from('exams').select('*').order('id');
+  if(error){ document.getElementById('list').innerHTML = "خطأ: " + error.message; return; }
+  if(!data || data.length===0){ document.getElementById('list').innerHTML='مفيش امتحانات'; return; }
+  document.getElementById('list').innerHTML = data.map(e=>`
+    <div class="card" data-id="${e.id}">
+      <h3>${e.title}</h3>
+      <p>${e.duration_minutes || 0} دقيقة</p>
+      <button class="edit" data-action="edit" data-id="${e.id}">تعديل</button>
+      <button class="delete" data-action="delete" data-id="${e.id}">حذف</button>
+    </div>
+  `).join('');
+}
+
+// ده اللي بيشغل الزرارين - حل نهائي
+document.addEventListener('click', async function(e){
+  const btn = e.target.closest('button[data-action]');
+  if(!btn || btn.dataset.action === 'remove-question') return;
+  const id = btn.getAttribute('data-id');
+  const action = btn.getAttribute('data-action');
+
+  if(action === 'delete'){
+    if(!confirm('متأكد تمسح الامتحان ده؟')) return;
+    await supabaseClient.from('questions').delete().eq('exam_id', id);
+    const {error} = await supabaseClient.from('exams').delete().eq('id', id);
+    if(error) alert(error.message); else { alert('اتمسح ✅'); loadExams(); }
+  }
+
+  if(action === 'edit'){
+    const newTitle = prompt('اكتب الاسم الجديد:');
+    if(!newTitle) return;
+    const {error} = await supabaseClient.from('exams').update({title: newTitle}).eq('id', id);
+    if(error) alert(error.message); else { alert('اتعدل ✅'); loadExams(); }
+  }
+});
+
+</script>
+</body>
+</html>

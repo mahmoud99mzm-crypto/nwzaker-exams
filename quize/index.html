@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123c35">
+  <title>nwzaker-exam</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html">nwzaker-exam <span>- امتحانات</span></a>
+    <nav class="form-actions">
+      <a class="button button-small button-outline" href="login.html">دخول الطالب</a>
+      <a class="button button-small button-outline" href="admin.html">دخول المشرف</a>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero">
+      <p class="eyebrow">اختبر معلوماتك</p>
+      <h1>جاهز تبدأ امتحانك؟</h1>
+      <p>اختار امتحانك وابدأ في أي وقت.</p>
+    </section>
+    <section aria-labelledby="examsTitle">
+      <div class="section-heading">
+        <h2 id="examsTitle">الامتحانات المتاحة</h2>
+        <span id="examCount" class="muted"></span>
+      </div>
+      <p id="statusMessage" class="notice" role="status">جاري تحميل الامتحانات...</p>
+      <div id="examList" class="exam-grid"></div>
+    </section>
+  </main>
+  <footer class="site-footer">nwzaker-exam</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="Script.js"></script>
+</body>
+</html>

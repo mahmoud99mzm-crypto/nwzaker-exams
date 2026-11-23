@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دخول الطالب - nwzaker-exam</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="quiz-wrap">
+    <div class="row-between quiz-top">
+      <a class="brand" href="index.html">nwzaker-exam <span>- دخول الطالب</span></a>
+      <span id="timer" class="timer"></span>
+    </div>
+    <section class="quiz-box">
+      <p id="statusMessage" class="notice" role="status"></p>
+      <form id="studentAuthForm" novalidate>
+        <h1 id="authHeading">دخول الطالب</h1>
+        <p id="authDescription" class="muted">سجّل الدخول أو أنشئ حسابًا للمتابعة وحل الامتحان.</p>
+        <div class="field">
+          <label for="studentEmail">البريد الإلكتروني</label>
+          <input id="studentEmail" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="studentPassword">كلمة المرور</label>
+          <input id="studentPassword" type="password" minlength="6" autocomplete="current-password" required>
+        </div>
+        <div class="form-actions">
+          <button id="authSubmit" type="submit" class="button">دخول</button>
+          <button id="authModeToggle" type="button" class="button button-secondary">إنشاء حساب جديد</button>
+        </div>
+        <button id="googleAuthBtn" class="button button-outline" type="button" style="width: 100%; margin-top: 12px">المتابعة باستخدام Google</button>
+      </form>
+      <section id="examPicker" class="hidden">
+        <div class="row-between">
+          <div>
+            <h1>اختار امتحانك</h1>
+            <p class="muted">تم تسجيل دخولك. اختار امتحانًا للبدء.</p>
+          </div>
+          <button id="pickerLogoutBtn" class="button button-small button-outline" type="button">خروج الطالب</button>
+        </div>
+        <div id="availableExams" class="exam-grid"></div>
+      </section>
+      <div id="quizContent" class="hidden">
+        <div class="row-between">
+          <p id="progress" class="muted"></p>
+          <button id="logoutBtn" class="button button-small button-outline" type="button">خروج الطالب</button>
+        </div>
+        <h1 id="examTitle"></h1>
+        <h2 id="questionText" class="quiz-question"></h2>
+        <div id="optionsBox"></div>
+        <div class="quiz-controls">
+          <a class="button button-outline" href="index.html">العودة للامتحانات</a>
+          <button type="button" class="button" id="nextBtn">السؤال التالي</button>
+        </div>
+        <p id="resultBox" role="status"></p>
+      </div>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="questions.js"></script>
+</body>
+</html>
