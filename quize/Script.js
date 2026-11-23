@@ -43,14 +43,17 @@ async function loadExams() {
     return;
   }
 
-  const { data: exams, error } = await window.supabaseClient
-    .from("exams")
-    .select("id, title, description, duration_minutes, created_at")
-    .order("created_at", { ascending: false });
-
-  if (error) {
+  let exams;
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("exams")
+      .select("id, title, description, duration_minutes, created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    exams = data || [];
+  } catch (error) {
     console.error("Could not load exams:", error);
-    showStatus(`تعذر تحميل الامتحانات: ${error.message}`, "error");
+    showStatus(`تعذر تحميل الامتحانات: ${error.message || "تحقق من اتصال الإنترنت وحاول مرة أخرى."}`, "error");
     return;
   }
 
@@ -62,14 +65,18 @@ async function loadExams() {
   }
 
   const examIds = exams.map((exam) => exam.id);
-  const { data: questions, error: questionsError } = await window.supabaseClient
-    .from("questions")
-    .select("exam_id")
-    .in("exam_id", examIds);
-
-  if (questionsError) {
-    console.error("Could not load question counts:", questionsError);
-    showStatus(`تم تحميل الامتحانات لكن تعذر تحميل عدد الأسئلة: ${questionsError.message}`, "error");
+  let questions;
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("questions")
+      .select("exam_id")
+      .in("exam_id", examIds);
+    if (error) throw error;
+    questions = data || [];
+  } catch (error) {
+    console.error("Could not load question counts:", error);
+    exams.forEach((exam) => examListEl.append(makeExamCard(exam, 0)));
+    showStatus(`تم تحميل الامتحانات لكن تعذر تحميل عدد الأسئلة: ${error.message || "تحقق من الاتصال وحاول مرة أخرى."}`, "error");
     return;
   }
 
