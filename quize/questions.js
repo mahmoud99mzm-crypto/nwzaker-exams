@@ -346,3 +346,4 @@ if (!window.supabaseClient) {
   });
 }
 });
+      
